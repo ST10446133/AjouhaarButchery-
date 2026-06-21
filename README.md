@@ -1,5 +1,3 @@
-# AjouhaarButchery-
-Website for Ajouhaar Butchery
 # Ajouhaar Sales and Stock Website
 
 This is the sales and stock management website for Ajouhaar Moslem Butchery. It was built with ASP.NET Core Razor Pages and connects to a local MySQL database called `ajouhaar_butchery`.
