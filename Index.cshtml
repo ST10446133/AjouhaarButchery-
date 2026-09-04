@@ -1,0 +1,559 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Ajouhaar Sales and Stock";
+    decimal saleCartTotal = Model.CurrentSaleItems.Sum(item => item.LineTotal);
+    var recentSales = Model.Sales.OrderByDescending(sale => sale.SaleDate).Take(5).ToList();
+}
+
+@if (!Model.IsLoggedIn)
+{
+    <section class="login-shell">
+        <div class="login-panel">
+            <div>
+                <h1>Ajouhaar Moslem Butchery</h1>
+            </div>
+
+            <form method="post" asp-page-handler="Login" class="login-form">
+                <label asp-for="Login.Username">Username</label>
+                <input asp-for="Login.Username" autocomplete="username" placeholder="Enter username" required>
+
+                <label asp-for="Login.Password">Password</label>
+                <input asp-for="Login.Password" type="password" autocomplete="current-password" placeholder="Enter password" required>
+
+                <label asp-for="Login.Role">Role</label>
+                <select asp-for="Login.Role">
+                    <option value="Cashier">Cashier</option>
+                    <option value="Manager">Manager</option>
+                </select>
+
+                <button class="primary-action" type="submit">Sign in</button>
+                @if (!string.IsNullOrWhiteSpace(Model.Message))
+                {
+                    <p class="form-message">@Model.Message</p>
+                }
+            </form>
+        </div>
+    </section>
+}
+else
+{
+    <section class="app-shell">
+        <aside class="sidebar">
+            <div class="brand-lockup">
+                <span class="brand-mark">A</span>
+                <div>
+                    <strong>Ajouhaar</strong>
+                    <small>Butchery POS</small>
+                </div>
+            </div>
+
+            <nav class="side-nav" aria-label="Application sections">
+                <a class="nav-tab @Model.ActiveViewClass("Dashboard")" asp-page="./Index" asp-route-view="Dashboard">Dashboard</a>
+                <a class="nav-tab @Model.ActiveViewClass("Sales")" asp-page="./Index" asp-route-view="Sales">New Sale</a>
+                <a class="nav-tab @Model.ActiveViewClass("Products")" asp-page="./Index" asp-route-view="Products">Products</a>
+                <a class="nav-tab @Model.ActiveViewClass("Stock")" asp-page="./Index" asp-route-view="Stock">Stock</a>
+                <a class="nav-tab @Model.ActiveViewClass("Transactions")" asp-page="./Index" asp-route-view="Transactions">Transactions</a>
+                @if (Model.ActiveUserRole == "Manager")
+                {
+                    <a class="nav-tab @Model.ActiveViewClass("Staff")" asp-page="./Index" asp-route-view="Staff">Staff</a>
+                }
+                <a class="nav-tab @Model.ActiveViewClass("Reports")" asp-page="./Index" asp-route-view="Reports">Reports</a>
+            </nav>
+
+            <form method="post" asp-page-handler="Logout">
+                <button class="ghost-action full-width" type="submit">Sign out</button>
+            </form>
+        </aside>
+
+        <main class="workspace">
+            <header class="topbar">
+                <div>
+                    <h2>@Model.View</h2>
+                </div>
+                <div class="user-chip">
+                    <span>@Model.ActiveUserName</span>
+                    <small>@Model.ActiveUserRole</small>
+                </div>
+            </header>
+
+            @if (!string.IsNullOrWhiteSpace(Model.Message))
+            {
+                <div class="notice @Model.MessageType">@Model.Message</div>
+            }
+
+            @if (Model.View.Equals("Dashboard", StringComparison.OrdinalIgnoreCase))
+            {
+                <div class="metric-grid">
+                    <article class="metric-card">
+                        <span>Today sales</span>
+                        <strong>@Model.Money(Model.TodaySalesTotal)</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Transactions</span>
+                        <strong>@Model.Sales.Count</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Low stock items</span>
+                        <strong>@Model.LowStockProducts.Count</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span>Active products</span>
+                        <strong>@Model.ActiveProducts.Count</strong>
+                    </article>
+                </div>
+
+                <div class="two-column">
+                    <article class="panel">
+                        <div class="panel-heading">
+                            <h3>Recent transactions</h3>
+                            <a class="text-action" asp-page="./Index" asp-route-view="Transactions">View all</a>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr><th>Receipt</th><th>Customer</th><th>Total</th><th>Payment</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var sale in recentSales)
+                                    {
+                                        <tr>
+                                            <td>@sale.ReceiptNumber</td>
+                                            <td>@sale.CustomerName</td>
+                                            <td>@Model.Money(sale.TotalAmount)</td>
+                                            <td>@sale.PaymentMethod</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-heading">
+                            <h3>Stock attention</h3>
+                            <a class="text-action" asp-page="./Index" asp-route-view="Stock">Manage</a>
+                        </div>
+                        <div class="alert-list">
+                            @if (Model.LowStockProducts.Count == 0)
+                            {
+                                <div class="report-line">All active products are above reorder level.</div>
+                            }
+                            @foreach (var product in Model.LowStockProducts)
+                            {
+                                <div class="alert-item">
+                                    <strong>@product.ProductName</strong>
+                                    <p>@product.QuantityOnHand.ToString("N1") kg on hand. Reorder level is @product.ReorderLevel.ToString("N1") kg.</p>
+                                </div>
+                            }
+                        </div>
+                    </article>
+                </div>
+            }
+
+            @if (Model.View.Equals("Sales", StringComparison.OrdinalIgnoreCase))
+            {
+                <div class="two-column sales-layout">
+                    <article class="panel form-grid">
+                        <div class="panel-heading">
+                            <h3>Capture customer purchase</h3>
+                        </div>
+
+                        <form method="post" asp-page-handler="AddSaleItem" asp-route-view="Sales" class="form-grid">
+                            <label asp-for="SaleForm.ProductID">Product</label>
+                            <select asp-for="SaleForm.ProductID">
+                                @foreach (var product in Model.ActiveProducts)
+                                {
+                                    <option value="@product.ProductID">@product.ProductName - @Model.Money(product.UnitPrice) / kg (@product.QuantityOnHand.ToString("N1") kg)</option>
+                                }
+                            </select>
+
+                            <label asp-for="SaleForm.QuantitySold">Quantity sold (kg)</label>
+                            <input asp-for="SaleForm.QuantitySold" type="number" min="0.1" step="0.1">
+
+                            <button class="secondary-action" type="submit">Add item</button>
+                        </form>
+
+                        <form method="post" asp-page-handler="CompleteSale" asp-route-view="Sales" class="form-grid">
+                            <label asp-for="SaleForm.CustomerName">Customer name</label>
+                            <input asp-for="SaleForm.CustomerName" placeholder="Walk-in Customer">
+
+                            <label asp-for="SaleForm.CustomerContact">Contact number</label>
+                            <input asp-for="SaleForm.CustomerContact" placeholder="N/A">
+
+                            <label asp-for="SaleForm.PaymentMethod">Payment method</label>
+                            <select asp-for="SaleForm.PaymentMethod">
+                                <option>Cash</option>
+                                <option>Card</option>
+                            </select>
+
+                            <button class="primary-action" type="submit">Complete sale</button>
+                        </form>
+                    </article>
+
+                    <article class="panel">
+                        <div class="panel-heading">
+                            <h3>Sale items</h3>
+                            <strong>@Model.Money(saleCartTotal)</strong>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.CurrentSaleItems.Count == 0)
+                                    {
+                                        <tr><td colspan="5">Add products to start a sale.</td></tr>
+                                    }
+                                    @for (int i = 0; i < Model.CurrentSaleItems.Count; i++)
+                                    {
+                                        var item = Model.CurrentSaleItems[i];
+                                        <tr>
+                                            <td>@item.ProductName</td>
+                                            <td>@item.QuantitySold.ToString("N1") kg</td>
+                                            <td>@Model.Money(item.UnitPrice)</td>
+                                            <td>@Model.Money(item.LineTotal)</td>
+                                            <td>
+                                                <form method="post" asp-page-handler="RemoveSaleItem" asp-route-index="@i" asp-route-view="Sales">
+                                                    <button class="danger-button" type="submit">Remove</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        @if (Model.LastReceipt != null)
+                        {
+                            <div class="receipt-preview printable-receipt" id="customerReceipt">
+                                <div class="receipt-header">
+                                    <strong>Ajouhaar Moslem Butchery</strong>
+                                    <span>Customer Receipt</span>
+                                </div>
+
+                                <div class="receipt-meta">
+                                    <p><strong>Receipt:</strong> @Model.LastReceipt.ReceiptNumber</p>
+                                    <p><strong>Date:</strong> @Model.LastReceipt.SaleDate.ToString("g")</p>
+                                    <p><strong>Customer:</strong> @Model.LastReceipt.CustomerName</p>
+                                    <p><strong>Cashier:</strong> @Model.LastReceipt.Cashier</p>
+                                </div>
+
+                                <table class="receipt-table">
+                                    <thead>
+                                        <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var item in Model.LastReceipt.Items)
+                                        {
+                                            <tr>
+                                                <td>@item.ProductName</td>
+                                                <td>@item.QuantitySold.ToString("N1") kg</td>
+                                                <td>@Model.Money(item.UnitPrice)</td>
+                                                <td>@Model.Money(item.LineTotal)</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+
+                                <div class="receipt-total">
+                                    <span>@Model.LastReceipt.PaymentMethod</span>
+                                    <strong>Total paid: @Model.Money(Model.LastReceipt.TotalAmount)</strong>
+                                </div>
+
+                                <p class="receipt-footer">Thank you for shopping with us.</p>
+                                <button class="primary-action receipt-print-button" type="button" onclick="printCustomerReceipt()">Print receipt</button>
+                            </div>
+                        }
+                    </article>
+                </div>
+            }
+
+            @if (Model.View.Equals("Products", StringComparison.OrdinalIgnoreCase))
+            {
+                <div class="full-page-panel">
+                    @if (Model.ActiveUserRole == "Manager")
+                    {
+                        <article class="panel product-form-panel">
+                            <div class="panel-heading">
+                                <h3>Add new product</h3>
+                            </div>
+
+                            <form method="post" asp-page-handler="SaveProduct" asp-route-view="Products" class="product-form-grid">
+                                <input asp-for="ProductForm.ProductID" type="hidden" value="0">
+
+                                <div>
+                                    <label asp-for="ProductForm.ProductName">Product name</label>
+                                    <input asp-for="ProductForm.ProductName" placeholder="Enter product name" required>
+                                </div>
+
+                                <div>
+                                    <label asp-for="ProductForm.Category">Category</label>
+                                    <input asp-for="ProductForm.Category" placeholder="Beef, Lamb, Poultry..." required>
+                                </div>
+
+                                <div>
+                                    <label asp-for="ProductForm.UnitPrice">Price per kg</label>
+                                    <input asp-for="ProductForm.UnitPrice" type="number" min="0.01" step="0.01" required>
+                                </div>
+
+                                <div>
+                                    <label asp-for="ProductForm.QuantityOnHand">Quantity on hand (kg)</label>
+                                    <input asp-for="ProductForm.QuantityOnHand" type="number" min="0" step="0.1" required>
+                                </div>
+
+                                <div>
+                                    <label asp-for="ProductForm.ReorderLevel">Reorder level (kg)</label>
+                                    <input asp-for="ProductForm.ReorderLevel" type="number" min="0" step="0.1" required>
+                                </div>
+
+                                <label class="toggle-line product-active-toggle">
+                                    <input asp-for="ProductForm.IsActive" type="checkbox" checked>
+                                    Active product
+                                </label>
+
+                                <button class="primary-action" type="submit">Add product</button>
+                            </form>
+                        </article>
+                    }
+
+                    <article class="panel">
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr><th>ID</th><th>Product</th><th>Category</th><th>Price per kg</th><th>Status</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var product in Model.Products)
+                                    {
+                                        <tr>
+                                            <td>@product.ProductID</td>
+                                            <td>@product.ProductName</td>
+                                            <td>@product.Category</td>
+                                            <td>@Model.Money(product.UnitPrice)</td>
+                                            <td>
+                                                @if (Model.ActiveUserRole == "Manager")
+                                                {
+                                                    <form method="post" asp-page-handler="UpdateProductStatus" asp-route-view="Products" class="status-form">
+                                                        <input type="hidden" name="productID" value="@product.ProductID">
+                                                        <select name="isActive" onchange="this.form.submit()" aria-label="Status for @product.ProductName">
+                                                            <option value="true" selected="@product.IsActive">Active</option>
+                                                            <option value="false" selected="@(!product.IsActive)">Inactive</option>
+                                                        </select>
+                                                    </form>
+                                                }
+                                                else
+                                                {
+                                                    <span class="status-pill @(product.IsActive ? "" : "inactive")">@(product.IsActive ? "Active" : "Inactive")</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                </div>
+            }
+
+            @if (Model.View.Equals("Stock", StringComparison.OrdinalIgnoreCase))
+            {
+                <article class="panel stock-print-report" id="stockReport">
+                    <div class="panel-heading">
+                        <h3>Stock level report</h3>
+                        <button class="secondary-action" type="button" onclick="printStockReport()">Print report</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Product ID</th><th>Product</th><th>Category</th><th>On hand</th><th>Reorder level</th><th>Status</th><th>Last updated</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var product in Model.Products)
+                                {
+                                    string status = product.IsActive ? product.IsLowStock ? "Low stock" : "Available" : "Inactive";
+                                    string statusClass = product.IsActive ? product.IsLowStock ? "low" : "" : "inactive";
+                                    <tr>
+                                        <td>@product.ProductID</td>
+                                        <td>@product.ProductName</td>
+                                        <td>@product.Category</td>
+                                        <td>@product.QuantityOnHand.ToString("N1") kg</td>
+                                        <td>@product.ReorderLevel.ToString("N1") kg</td>
+                                        <td><span class="status-pill @statusClass">@status</span></td>
+                                        <td>@product.LastUpdated</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            }
+
+            @if (Model.View.Equals("Staff", StringComparison.OrdinalIgnoreCase))
+            {
+                @if (Model.ActiveUserRole == "Manager")
+                {
+                    <div class="full-page-panel">
+                        <article class="panel staff-form-panel">
+                            <div class="panel-heading">
+                                <h3>Add new staff member</h3>
+                            </div>
+
+                            <form method="post" asp-page-handler="AddStaff" asp-route-view="Staff" class="staff-form-grid">
+                                <div>
+                                    <label asp-for="StaffForm.FullName">Full name</label>
+                                    <input asp-for="StaffForm.FullName" placeholder="Enter staff full name" required>
+                                </div>
+
+                                <div>
+                                    <label asp-for="StaffForm.Role">Role</label>
+                                    <select asp-for="StaffForm.Role">
+                                        <option value="Cashier">Cashier</option>
+                                        <option value="Manager">Manager</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label asp-for="StaffForm.Username">Username</label>
+                                    <input asp-for="StaffForm.Username" autocomplete="off" placeholder="Create username" required>
+                                </div>
+
+                                <div>
+                                    <label asp-for="StaffForm.Password">Password</label>
+                                    <input asp-for="StaffForm.Password" type="password" autocomplete="new-password" placeholder="Create password" required>
+                                </div>
+
+                                <button class="primary-action" type="submit">Add staff member</button>
+                            </form>
+                        </article>
+
+                        <article class="panel">
+                            <div class="panel-heading">
+                                <h3>Staff members</h3>
+                            </div>
+                            <div class="staff-list">
+                                <div class="staff-list-header">
+                                    <span>ID</span>
+                                    <span>Full name</span>
+                                    <span>Role</span>
+                                    <span>Username</span>
+                                    <span>New password</span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+
+                                @foreach (var user in Model.Users)
+                                {
+                                    <div class="staff-edit-row">
+                                        <span>@user.UserID</span>
+                                        <form method="post" asp-page-handler="UpdateStaff" asp-route-view="Staff" class="staff-update-form">
+                                            <input type="hidden" name="userID" value="@user.UserID">
+                                            <input name="fullName" value="@user.FullName" aria-label="Full name for @user.FullName" required>
+                                            <select name="role" aria-label="Role for @user.FullName">
+                                                <option value="Cashier" selected="@(user.Role == "Cashier")">Cashier</option>
+                                                <option value="Manager" selected="@(user.Role == "Manager")">Manager</option>
+                                            </select>
+                                            <input name="username" value="@user.Username" aria-label="Username for @user.FullName" required>
+                                            <input name="password" type="password" autocomplete="new-password" placeholder="Leave blank to keep" aria-label="New password for @user.FullName">
+                                            <button class="secondary-action" type="submit">Save</button>
+                                        </form>
+                                        <form method="post" asp-page-handler="DeleteStaff" asp-route-view="Staff">
+                                            <input type="hidden" name="userID" value="@user.UserID">
+                                            <button class="danger-button delete-staff-button" type="submit">Delete</button>
+                                        </form>
+                                    </div>
+                                }
+                            </div>
+                        </article>
+                    </div>
+                }
+                else
+                {
+                    <div class="notice error">Only the manager can view staff members.</div>
+                }
+            }
+
+            @if (Model.View.Equals("Transactions", StringComparison.OrdinalIgnoreCase))
+            {
+                <article class="panel transaction-print-report" id="transactionReport">
+                    <div class="panel-heading">
+                        <h3>Transaction history</h3>
+                        <button class="secondary-action" type="button" onclick="printTransactionReport()">Print history</button>
+                    </div>
+                    <form method="get" class="filter-row">
+                        <input type="hidden" name="view" value="Transactions">
+                        <input asp-for="SearchText" placeholder="Search receipt, customer or cashier">
+                        <input asp-for="FilterDate" type="date">
+                        <button class="secondary-action" type="submit">Filter</button>
+                    </form>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>Receipt</th><th>Date</th><th>Customer</th><th>Cashier</th><th>Items</th><th>Total</th><th>Payment</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var sale in Model.FilteredSales)
+                                {
+                                    <tr>
+                                        <td>@sale.ReceiptNumber</td>
+                                        <td>@sale.SaleDate.ToString("g")</td>
+                                        <td>@sale.CustomerName</td>
+                                        <td>@sale.Cashier</td>
+                                        <td>@string.Join(", ", sale.Items.Select(item => $"{item.ProductName} ({item.QuantitySold:N1} kg)"))</td>
+                                        <td>@Model.Money(sale.TotalAmount)</td>
+                                        <td>@sale.PaymentMethod</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            }
+
+            @if (Model.View.Equals("Reports", StringComparison.OrdinalIgnoreCase))
+            {
+                <div class="full-page-panel">
+                    <article class="panel">
+                        <div class="panel-heading">
+                            <h3>Daily sales report</h3>
+                            <button class="secondary-action" type="button" onclick="window.print()">Print report</button>
+                        </div>
+                        <div class="report-block">
+                            <div class="report-line"><strong>Total income:</strong> @Model.Money(Model.AllSalesTotal)</div>
+                            <div class="report-line"><strong>Number of transactions:</strong> @Model.Sales.Count</div>
+                            <div class="report-line"><strong>Cash payments:</strong> @Model.Money(Model.CashSalesTotal)</div>
+                            <div class="report-line"><strong>Card payments:</strong> @Model.Money(Model.CardSalesTotal)</div>
+                            <div class="report-line"><strong>Low-stock products:</strong> @Model.LowStockProducts.Count</div>
+                        </div>
+                    </article>
+                </div>
+            }
+        </main>
+    </section>
+}
+
+@section Scripts {
+    <script>
+        function printCustomerReceipt() {
+            document.body.classList.add("printing-receipt");
+            window.print();
+        }
+
+        window.addEventListener("afterprint", () => {
+            document.body.classList.remove("printing-receipt");
+            document.body.classList.remove("printing-stock-report");
+            document.body.classList.remove("printing-transaction-report");
+        });
+
+        function printStockReport() {
+            document.body.classList.add("printing-stock-report");
+            window.print();
+        }
+
+        function printTransactionReport() {
+            document.body.classList.add("printing-transaction-report");
+            window.print();
+        }
+    </script>
+}
