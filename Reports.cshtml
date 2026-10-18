@@ -1,0 +1,26 @@
+@page
+@model AjouhaarSalesStockWebsite.Pages.IndexModel
+@{
+    Layout = "_AppLayout";
+    Model.View = "Reports";
+    ViewData["Title"] = "Reports";
+}
+
+@if (Model.View.Equals("Reports", StringComparison.OrdinalIgnoreCase))
+{
+    <div class="full-page-panel">
+        <article class="panel">
+            <div class="panel-heading">
+                <h3>Daily sales report</h3>
+                <button class="secondary-action" type="button" onclick="window.print()">Print report</button>
+            </div>
+            <div class="report-block">
+                <div class="report-line"><strong>Total income:</strong> @Model.Money(Model.AllSalesTotal)</div>
+                <div class="report-line"><strong>Number of transactions:</strong> @Model.Sales.Count</div>
+                <div class="report-line"><strong>Cash payments:</strong> @Model.Money(Model.CashSalesTotal)</div>
+                <div class="report-line"><strong>Card payments:</strong> @Model.Money(Model.CardSalesTotal)</div>
+                <div class="report-line"><strong>Low-stock products:</strong> @Model.LowStockProducts.Count</div>
+            </div>
+        </article>
+    </div>
+}

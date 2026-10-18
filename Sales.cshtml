@@ -1,0 +1,128 @@
+@page
+@model AjouhaarSalesStockWebsite.Pages.IndexModel
+@{
+    Layout = "_AppLayout";
+    Model.View = "Sales";
+    decimal saleCartTotal = Model.CurrentSaleItems.Sum(item => item.LineTotal);
+    ViewData["Title"] = "Sales";
+}
+
+@if (Model.View.Equals("Sales", StringComparison.OrdinalIgnoreCase))
+{
+    <div class="two-column sales-layout">
+        <article class="panel form-grid">
+            <div class="panel-heading">
+                <h3>Capture customer purchase</h3>
+            </div>
+
+            <form method="post" asp-page-handler="AddSaleItem" asp-route-view="Sales" class="form-grid">
+                <label asp-for="SaleForm.ProductID">Product</label>
+                <select asp-for="SaleForm.ProductID">
+                    @foreach (var product in Model.ActiveProducts)
+                    {
+                        <option value="@product.ProductID">@product.ProductName - @Model.Money(product.UnitPrice) / kg (@product.QuantityOnHand.ToString("N1") kg)</option>
+                    }
+                </select>
+
+                <label asp-for="SaleForm.QuantitySold">Quantity sold (kg)</label>
+                <input asp-for="SaleForm.QuantitySold" type="number" min="0.1" step="0.1">
+
+                <button class="secondary-action" type="submit">Add item</button>
+            </form>
+
+            <form method="post" asp-page-handler="CompleteSale" asp-route-view="Sales" class="form-grid">
+                <label asp-for="SaleForm.CustomerName">Customer name</label>
+                <input asp-for="SaleForm.CustomerName" placeholder="Walk-in Customer">
+
+                <label asp-for="SaleForm.CustomerContact">Contact number</label>
+                <input asp-for="SaleForm.CustomerContact" placeholder="N/A">
+
+                <label asp-for="SaleForm.PaymentMethod">Payment method</label>
+                <select asp-for="SaleForm.PaymentMethod">
+                    <option>Cash</option>
+                    <option>Card</option>
+                </select>
+
+                <button class="primary-action" type="submit">Complete sale</button>
+            </form>
+        </article>
+
+        <article class="panel">
+            <div class="panel-heading">
+                <h3>Sale items</h3>
+                <strong>@Model.Money(saleCartTotal)</strong>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.CurrentSaleItems.Count == 0)
+                        {
+                            <tr><td colspan="5">Add products to start a sale.</td></tr>
+                        }
+                        @for (int i = 0; i < Model.CurrentSaleItems.Count; i++)
+                        {
+                            var item = Model.CurrentSaleItems[i];
+                            <tr>
+                                <td>@item.ProductName</td>
+                                <td>@item.QuantitySold.ToString("N1") kg</td>
+                                <td>@Model.Money(item.UnitPrice)</td>
+                                <td>@Model.Money(item.LineTotal)</td>
+                                <td>
+                                    <form method="post" asp-page-handler="RemoveSaleItem" asp-route-index="@i" asp-route-view="Sales">
+                                        <button class="danger-button" type="submit">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (Model.LastReceipt != null)
+            {
+                <div class="receipt-preview printable-receipt" id="customerReceipt">
+                    <div class="receipt-header">
+                        <strong>Ajouhaar Moslem Butchery</strong>
+                        <span>Customer Receipt</span>
+                    </div>
+
+                    <div class="receipt-meta">
+                        <p><strong>Receipt:</strong> @Model.LastReceipt.ReceiptNumber</p>
+                        <p><strong>Date:</strong> @Model.LastReceipt.SaleDate.ToString("g")</p>
+                        <p><strong>Customer:</strong> @Model.LastReceipt.CustomerName</p>
+                        <p><strong>Cashier:</strong> @Model.LastReceipt.Cashier</p>
+                    </div>
+
+                    <table class="receipt-table">
+                        <thead>
+                            <tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.LastReceipt.Items)
+                            {
+                                <tr>
+                                    <td>@item.ProductName</td>
+                                    <td>@item.QuantitySold.ToString("N1") kg</td>
+                                    <td>@Model.Money(item.UnitPrice)</td>
+                                    <td>@Model.Money(item.LineTotal)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <div class="receipt-total">
+                        <span>@Model.LastReceipt.PaymentMethod</span>
+                        <strong>Total paid: @Model.Money(Model.LastReceipt.TotalAmount)</strong>
+                    </div>
+
+                    <p class="receipt-footer">Thank you for shopping with us.</p>
+                    <button class="primary-action receipt-print-button" type="button" onclick="printCustomerReceipt()">Print receipt</button>
+                </div>
+            }
+        </article>
+    </div>
+}
+

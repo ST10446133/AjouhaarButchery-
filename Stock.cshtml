@@ -1,0 +1,41 @@
+@page
+@model AjouhaarSalesStockWebsite.Pages.IndexModel
+@{
+    Layout = "_AppLayout";
+    Model.View = "Stock";
+    ViewData["Title"] = "Stock";
+}
+
+@if (Model.View.Equals("Stock", StringComparison.OrdinalIgnoreCase))
+{
+    <article class="panel stock-print-report" id="stockReport">
+        <div class="panel-heading">
+            <h3>Stock level report</h3>
+            <button class="secondary-action" type="button" onclick="printStockReport()">Print report</button>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Product ID</th><th>Product</th><th>Category</th><th>On hand</th><th>Reorder level</th><th>Status</th><th>Last updated</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in Model.Products)
+                    {
+                        string status = product.IsActive ? product.IsLowStock ? "Low stock" : "Available" : "Inactive";
+                        string statusClass = product.IsActive ? product.IsLowStock ? "low" : "" : "inactive";
+                        <tr>
+                            <td>@product.ProductID</td>
+                            <td>@product.ProductName</td>
+                            <td>@product.Category</td>
+                            <td>@product.QuantityOnHand.ToString("N1") kg</td>
+                            <td>@product.ReorderLevel.ToString("N1") kg</td>
+                            <td><span class="status-pill @statusClass">@status</span></td>
+                            <td>@product.LastUpdated</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </article>
+}
+

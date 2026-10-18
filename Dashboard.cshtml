@@ -1,0 +1,79 @@
+@page
+@model AjouhaarSalesStockWebsite.Pages.IndexModel
+@{
+    Layout = "_AppLayout";
+    Model.View = "Dashboard";
+    var recentSales = Model.Sales.OrderByDescending(sale => sale.SaleDate).Take(5).ToList();
+    ViewData["Title"] = "Dashboard";
+}
+
+@if (Model.View.Equals("Dashboard", StringComparison.OrdinalIgnoreCase))
+{
+    <div class="metric-grid">
+        <article class="metric-card">
+            <span>Today sales</span>
+            <strong>@Model.Money(Model.TodaySalesTotal)</strong>
+        </article>
+        <article class="metric-card">
+            <span>Transactions</span>
+            <strong>@Model.Sales.Count</strong>
+        </article>
+        <article class="metric-card">
+            <span>Low stock items</span>
+            <strong>@Model.LowStockProducts.Count</strong>
+        </article>
+        <article class="metric-card">
+            <span>Active products</span>
+            <strong>@Model.ActiveProducts.Count</strong>
+        </article>
+    </div>
+
+    <div class="two-column">
+        <article class="panel">
+            <div class="panel-heading">
+                <h3>Recent transactions</h3>
+                <a class="text-action" asp-page="/Transactions">View all</a>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Receipt</th><th>Customer</th><th>Total</th><th>Payment</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var sale in recentSales)
+                        {
+                            <tr>
+                                <td>@sale.ReceiptNumber</td>
+                                <td>@sale.CustomerName</td>
+                                <td>@Model.Money(sale.TotalAmount)</td>
+                                <td>@sale.PaymentMethod</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </article>
+
+        <article class="panel">
+            <div class="panel-heading">
+                <h3>Stock attention</h3>
+                <a class="text-action" asp-page="/Stock">Manage</a>
+            </div>
+            <div class="alert-list">
+                @if (Model.LowStockProducts.Count == 0)
+                {
+                    <div class="report-line">All active products are above reorder level.</div>
+                }
+                @foreach (var product in Model.LowStockProducts)
+                {
+                    <div class="alert-item">
+                        <strong>@product.ProductName</strong>
+                        <p>@product.QuantityOnHand.ToString("N1") kg on hand. Reorder level is @product.ReorderLevel.ToString("N1") kg.</p>
+                    </div>
+                }
+            </div>
+        </article>
+    </div>
+}
+
+

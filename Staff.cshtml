@@ -1,0 +1,92 @@
+@page
+@model AjouhaarSalesStockWebsite.Pages.IndexModel
+@{
+    Layout = "_AppLayout";
+    Model.View = "Staff";
+    ViewData["Title"] = "Staff";
+}
+
+@if (Model.View.Equals("Staff", StringComparison.OrdinalIgnoreCase))
+{
+    @if (Model.ActiveUserRole == "Manager")
+    {
+        <div class="full-page-panel">
+            <article class="panel staff-form-panel">
+                <div class="panel-heading">
+                    <h3>Add new staff member</h3>
+                </div>
+
+                <form method="post" asp-page-handler="AddStaff" asp-route-view="Staff" class="staff-form-grid">
+                    <div>
+                        <label asp-for="StaffForm.FullName">Full name</label>
+                        <input asp-for="StaffForm.FullName" placeholder="Enter staff full name" required>
+                    </div>
+
+                    <div>
+                        <label asp-for="StaffForm.Role">Role</label>
+                        <select asp-for="StaffForm.Role">
+                            <option value="Cashier">Cashier</option>
+                            <option value="Manager">Manager</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label asp-for="StaffForm.Username">Username</label>
+                        <input asp-for="StaffForm.Username" autocomplete="off" placeholder="Create username" required>
+                    </div>
+
+                    <div>
+                        <label asp-for="StaffForm.Password">Password</label>
+                        <input asp-for="StaffForm.Password" type="password" autocomplete="new-password" placeholder="Create password" required>
+                    </div>
+
+                    <button class="primary-action" type="submit">Add staff member</button>
+                </form>
+            </article>
+
+            <article class="panel">
+                <div class="panel-heading">
+                    <h3>Staff members</h3>
+                </div>
+                <div class="staff-list">
+                    <div class="staff-list-header">
+                        <span>ID</span>
+                        <span>Full name</span>
+                        <span>Role</span>
+                        <span>Username</span>
+                        <span>New password</span>
+                        <span></span>
+                        <span></span>
+                    </div>
+
+                    @foreach (var user in Model.Users)
+                    {
+                        <div class="staff-edit-row">
+                            <span>@user.UserID</span>
+                            <form method="post" asp-page-handler="UpdateStaff" asp-route-view="Staff" class="staff-update-form">
+                                <input type="hidden" name="userID" value="@user.UserID">
+                                <input name="fullName" value="@user.FullName" aria-label="Full name for @user.FullName" required>
+                                <select name="role" aria-label="Role for @user.FullName">
+                                    <option value="Cashier" selected="@(user.Role == "Cashier")">Cashier</option>
+                                    <option value="Manager" selected="@(user.Role == "Manager")">Manager</option>
+                                </select>
+                                <input name="username" value="@user.Username" aria-label="Username for @user.FullName" required>
+                                <input name="password" type="password" autocomplete="new-password" placeholder="Leave blank to keep" aria-label="New password for @user.FullName">
+                                <button class="secondary-action" type="submit">Save</button>
+                            </form>
+                            <form method="post" asp-page-handler="DeleteStaff" asp-route-view="Staff">
+                                <input type="hidden" name="userID" value="@user.UserID">
+                                <button class="danger-button delete-staff-button" type="submit">Delete</button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </article>
+        </div>
+    }
+    else
+    {
+        <div class="notice error">Only the manager can view staff members.</div>
+    }
+}
+

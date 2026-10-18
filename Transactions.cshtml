@@ -1,0 +1,45 @@
+@page
+@model AjouhaarSalesStockWebsite.Pages.IndexModel
+@{
+    Layout = "_AppLayout";
+    Model.View = "Transactions";
+    ViewData["Title"] = "Transactions";
+}
+
+@if (Model.View.Equals("Transactions", StringComparison.OrdinalIgnoreCase))
+{
+    <article class="panel transaction-print-report" id="transactionReport">
+        <div class="panel-heading">
+            <h3>Transaction history</h3>
+            <button class="secondary-action" type="button" onclick="printTransactionReport()">Print history</button>
+        </div>
+        <form method="get" class="filter-row">
+            <input type="hidden" name="view" value="Transactions">
+            <input asp-for="SearchText" placeholder="Search receipt, customer or cashier">
+            <input asp-for="FilterDate" type="date">
+            <button class="secondary-action" type="submit">Filter</button>
+        </form>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Receipt</th><th>Date</th><th>Customer</th><th>Cashier</th><th>Items</th><th>Total</th><th>Payment</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var sale in Model.FilteredSales)
+                    {
+                        <tr>
+                            <td>@sale.ReceiptNumber</td>
+                            <td>@sale.SaleDate.ToString("g")</td>
+                            <td>@sale.CustomerName</td>
+                            <td>@sale.Cashier</td>
+                            <td>@string.Join(", ", sale.Items.Select(item => $"{item.ProductName} ({item.QuantitySold:N1} kg)"))</td>
+                            <td>@Model.Money(sale.TotalAmount)</td>
+                            <td>@sale.PaymentMethod</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </article>
+}
+
